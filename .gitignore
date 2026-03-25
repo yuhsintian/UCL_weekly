@@ -1,0 +1,43 @@
+# Python 虛擬環境
+backend/venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.js
+frontend/coverage/
+frontend/build/
+frontend/.DS_Store
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# 資料庫文件（視情況而定）
+# backend/ucl_weekly.db  # 如果您想要包含資料庫，請移除此行
+
+# 上傳的文件
+backend/app/uploads/*
+!backend/app/uploads/.gitkeep
+
+# IDE 和編輯器文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系統文件
+.DS_Store
+Thumbs.db
