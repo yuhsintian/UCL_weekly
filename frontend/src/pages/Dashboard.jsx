@@ -81,7 +81,7 @@ const Dashboard = () => {
                   <td>{report.title}</td>
                   <td>{report.author_name}</td>
                   <td>第 {report.week_number} 週</td>
-                  <td>{new Date(report.created_at).toLocaleString()}</td>
+                  <td>{report.created_at_formatted}</td>
                   <td>
                     <Link to={`/report/${report.id}`} className="btn btn-sm btn-info me-2">
                       查看

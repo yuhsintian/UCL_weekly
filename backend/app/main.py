@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import time
 
@@ -111,6 +111,11 @@ def get_reports(
     # 將 SQLAlchemy 模型轉換為字典
     result = []
     for report in reports:
+        created_at = report.created_at
+        if created_at and not created_at.tzinfo:
+            # 如果時間沒有時區信息，添加 UTC 時區
+            created_at = created_at.replace(tzinfo=timezone.utc)
+            
         result.append({
             "id": report.id,
             "title": report.title,
@@ -118,7 +123,7 @@ def get_reports(
             "week_number": report.week_number,
             "content": report.content,
             "file_path": report.file_path,
-            "created_at": report.created_at.isoformat()
+            "created_at": created_at.isoformat()
         })
     
     return result
@@ -135,6 +140,11 @@ def get_report(
     if report is None:
         raise HTTPException(status_code=404, detail="週報不存在")
     
+    # 確保時間包含時區信息
+    created_at = report.created_at
+    if created_at and not created_at.tzinfo:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+        
     return {
         "id": report.id,
         "title": report.title,
@@ -142,7 +152,7 @@ def get_report(
         "week_number": report.week_number,
         "content": report.content,
         "file_path": report.file_path,
-        "created_at": report.created_at.isoformat()
+        "created_at": created_at.isoformat()
     }
 
 # 上傳週報
@@ -181,12 +191,18 @@ async def create_report(
         author_name=author_name,
         week_number=week_number,
         content=content,
-        file_path=filename
+        file_path=filename,
+        created_at=datetime.now(timezone.utc)
     )
     
     db.add(db_report)
     db.commit()
     db.refresh(db_report)
+    
+    # 確保返回的時間包含時區信息
+    created_at = db_report.created_at
+    if created_at and not created_at.tzinfo:
+        created_at = created_at.replace(tzinfo=timezone.utc)
     
     return {
         "id": db_report.id,
@@ -195,7 +211,7 @@ async def create_report(
         "week_number": db_report.week_number,
         "content": db_report.content,
         "file_path": db_report.file_path,
-        "created_at": db_report.created_at.isoformat()
+        "created_at": created_at.isoformat()
     }
 
 # 刪除週報

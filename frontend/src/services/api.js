@@ -1,5 +1,36 @@
 const API_URL = 'http://163.18.26.141:8000';
 
+// 格式化時間為台灣時間 (UTC+8) 的輔助函數
+export const formatToTaiwanTime = (utcTimeString) => {
+  if (!utcTimeString) return '';
+  
+  // 解析時間字符串
+  const date = new Date(utcTimeString);
+  
+  // 檢查日期是否有效
+  if (isNaN(date.getTime())) {
+    return 'Invalid Date';
+  }
+  
+  // 直接使用 Date 對象的方法獲取本地時間組件
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  // 判斷上午/下午
+  const ampm = hours >= 12 ? '下午' : '上午';
+  const hours12 = hours % 12 || 12;
+  const hours12Str = String(hours12).padStart(2, '0');
+  
+  // 返回格式化後的時間字符串
+  return `${year}/${month}/${day} ${ampm}${hours12Str}:${minutes}:${seconds}`;
+};
+
+
+
 // 登入
 export const login = async (password) => {
   const formData = new FormData();
@@ -42,7 +73,14 @@ export const getReports = async () => {
     throw new Error(`API 錯誤: ${response.status}`);
   }
   
-  return await response.json();
+  const reports = await response.json();
+  
+  // 轉換每個報告的時間為台灣時間
+  return reports.map(report => ({
+    ...report,
+    // 保留原始 UTC 時間，添加格式化後的台灣時間
+    created_at_formatted: formatToTaiwanTime(report.created_at)
+  }));
 };
 
 // 獲取單個週報
@@ -55,7 +93,13 @@ export const getReport = async (id) => {
     throw new Error(`API 錯誤: ${response.status}`);
   }
   
-  return await response.json();
+  const report = await response.json();
+  
+  // 轉換時間為台灣時間
+  return {
+    ...report,
+    created_at_formatted: formatToTaiwanTime(report.created_at)
+  };
 };
 
 // 上傳週報
@@ -76,7 +120,13 @@ export const uploadReport = async (formData) => {
     }
   }
   
-  return await response.json();
+  const report = await response.json();
+  
+  // 轉換時間為台灣時間
+  return {
+    ...report,
+    created_at_formatted: formatToTaiwanTime(report.created_at)
+  };
 };
 
 // 刪除週報
