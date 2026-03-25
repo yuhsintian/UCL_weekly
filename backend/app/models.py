@@ -7,9 +7,9 @@ class Report(Base):
     __tablename__ = "reports"
 
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String, nullable=False)
-    author_name = Column(String, nullable=False)
+    title = Column(String(255), nullable=False) 
+    author_name = Column(String(100), nullable=False)
     week_number = Column(Integer, nullable=False)
-    content = Column(Text, nullable=True)
-    file_path = Column(String, nullable=True)
+    content = Column(Text, nullable=True)  
+    file_path = Column(String(255), nullable=True) 
     created_at = Column(DateTime, default=datetime.utcnow)

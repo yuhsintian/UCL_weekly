@@ -11,9 +11,11 @@ import time
 
 from . import models
 from .database import engine, SessionLocal
+from app.database import engine
+from app.models import Base
 
 # 建立資料表
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="UCL 週報上傳系統")
 
