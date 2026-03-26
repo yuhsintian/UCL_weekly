@@ -142,3 +142,90 @@ export const deleteReport = async (id) => {
   
   return await response.json();
 };
+
+// 獲取所有學生
+export const getStudents = async () => {
+  const response = await fetch(`${API_URL}/students/`, {
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API 錯誤: ${response.status}`);
+  }
+  
+  return await response.json();
+};
+
+// 獲取單個學生
+export const getStudent = async (studentId) => {
+  const response = await fetch(`${API_URL}/students/${studentId}`, {
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API 錯誤: ${response.status}`);
+  }
+  
+  return await response.json();
+};
+
+// 創建學生資料
+export const createStudent = async (studentData) => {
+  const formData = new FormData();
+  formData.append('student_id', studentData.student_id);
+  formData.append('grade', studentData.grade);
+  formData.append('name', studentData.name);
+  formData.append('email', studentData.email);
+  
+  const response = await fetch(`${API_URL}/students/`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    try {
+      const errorData = JSON.parse(errorText);
+      throw new Error(errorData.detail || `API 錯誤: ${response.status}`);
+    } catch (e) {
+      throw new Error(`API 錯誤: ${response.status}`);
+    }
+  }
+  
+  return await response.json();
+};
+
+// 更新學生資料
+export const updateStudent = async (studentId, studentData) => {
+  const formData = new FormData();
+  formData.append('grade', studentData.grade);
+  formData.append('name', studentData.name);
+  formData.append('email', studentData.email);
+  
+  const response = await fetch(`${API_URL}/students/${studentId}`, {
+    method: 'PUT',
+    body: formData,
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API 錯誤: ${response.status}`);
+  }
+  
+  return await response.json();
+};
+
+// 刪除學生資料
+export const deleteStudent = async (studentId) => {
+  const response = await fetch(`${API_URL}/students/${studentId}`, {
+    method: 'DELETE',
+    credentials: 'include'
+  });
+  
+  if (!response.ok) {
+    throw new Error(`API 錯誤: ${response.status}`);
+  }
+  
+  return await response.json();
+};

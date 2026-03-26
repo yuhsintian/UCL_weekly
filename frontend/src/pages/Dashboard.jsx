@@ -8,7 +8,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchReports = async () => {
       try {
@@ -27,7 +27,7 @@ const Dashboard = () => {
 
     fetchReports();
   }, [navigate]);
-  
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -52,6 +52,9 @@ const Dashboard = () => {
         <div>
           <Link to="/upload" className="btn btn-primary me-2">
             上傳新週報
+          </Link>
+          <Link to="/students" className="btn btn-success me-2">
+            學生管理
           </Link>
           <button onClick={handleLogout} className="btn btn-secondary">
             登出

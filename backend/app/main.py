@@ -236,3 +236,146 @@ def delete_report(
     db.commit()
     
     return {"message": "週報已刪除"}
+
+# 獲取所有學生
+@app.get("/students/")
+def get_students(
+    skip: int = 0, 
+    limit: int = 100, 
+    db: Session = Depends(get_db),
+    authenticated: bool = Depends(verify_session)
+):
+    students = db.query(models.Student).offset(skip).limit(limit).all()
+    
+    result = []
+    for student in students:
+        created_at = student.created_at
+        if created_at and not created_at.tzinfo:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+            
+        result.append({
+            "id": student.id,
+            "student_id": student.student_id,
+            "grade": student.grade,
+            "name": student.name,
+            "email": student.email,
+            "created_at": created_at.isoformat()
+        })
+    
+    return result
+
+# 獲取單個學生
+@app.get("/students/{student_id}")
+def get_student(
+    student_id: str, 
+    db: Session = Depends(get_db),
+    authenticated: bool = Depends(verify_session)
+):
+    student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
+    
+    if student is None:
+        raise HTTPException(status_code=404, detail="學生資料不存在")
+    
+    created_at = student.created_at
+    if created_at and not created_at.tzinfo:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    
+    return {
+        "id": student.id,
+        "student_id": student.student_id,
+        "grade": student.grade,
+        "name": student.name,
+        "email": student.email,
+        "created_at": created_at.isoformat()
+    }
+
+# 創建學生資料
+@app.post("/students/")
+def create_student(
+    student_id: str = Form(...),
+    grade: str = Form(...),
+    name: str = Form(...),
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+    authenticated: bool = Depends(verify_session)
+):
+    # 檢查學號是否已存在
+    db_student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
+    if db_student:
+        raise HTTPException(status_code=400, detail="學號已存在")
+    
+    # 創建學生記錄
+    db_student = models.Student(
+        student_id=student_id,
+        grade=grade,
+        name=name,
+        email=email,
+        created_at=datetime.now(timezone.utc)
+    )
+    
+    db.add(db_student)
+    db.commit()
+    db.refresh(db_student)
+    
+    created_at = db_student.created_at
+    if created_at and not created_at.tzinfo:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    
+    return {
+        "id": db_student.id,
+        "student_id": db_student.student_id,
+        "grade": db_student.grade,
+        "name": db_student.name,
+        "email": db_student.email,
+        "created_at": created_at.isoformat()
+    }
+
+# 更新學生資料
+@app.put("/students/{student_id}")
+def update_student(
+    student_id: str,
+    grade: str = Form(...),
+    name: str = Form(...),
+    email: str = Form(...),
+    db: Session = Depends(get_db),
+    authenticated: bool = Depends(verify_session)
+):
+    db_student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
+    if db_student is None:
+        raise HTTPException(status_code=404, detail="學生資料不存在")
+    
+    db_student.grade = grade
+    db_student.name = name
+    db_student.email = email
+    
+    db.commit()
+    db.refresh(db_student)
+    
+    created_at = db_student.created_at
+    if created_at and not created_at.tzinfo:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    
+    return {
+        "id": db_student.id,
+        "student_id": db_student.student_id,
+        "grade": db_student.grade,
+        "name": db_student.name,
+        "email": db_student.email,
+        "created_at": created_at.isoformat()
+    }
+
+# 刪除學生資料
+@app.delete("/students/{student_id}")
+def delete_student(
+    student_id: str,
+    db: Session = Depends(get_db),
+    authenticated: bool = Depends(verify_session)
+):
+    db_student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
+    if db_student is None:
+        raise HTTPException(status_code=404, detail="學生資料不存在")
+    
+    db.delete(db_student)
+    db.commit()
+    
+    return {"message": "學生資料已成功刪除"}
