@@ -45,6 +45,12 @@ def get_db():
     finally:
         db.close()
 
+def create_session_token():
+    token = secrets.token_urlsafe(32)
+    active_sessions[token] = time.time()
+    return token
+
+
 # 驗證 session token
 def verify_session(session_token: str = Cookie(None)):
     if not session_token or session_token not in active_sessions:
@@ -67,26 +73,30 @@ def verify_session(session_token: str = Cookie(None)):
 def read_root():
     return {"message": "UCL 週報上傳系統 API"}
 
-# 登入 API
-@app.post("/login")
-def login(password: str = Form(...)):
+
+# 登入端點
+@app.post("/login/")
+def login(password: str = Form(...), student_id: str = Form(...), db: Session = Depends(get_db)):
+    from app.models import Student  # 導入 Student 模型
+    
+    # 先檢查學生是否存在
+    student = db.query(Student).filter(Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    # 然後檢查密碼 (使用固定密碼 54ucl)
     if password != "54ucl":
-        raise HTTPException(status_code=401, detail="認證失敗")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # 生成 session token
-    token = secrets.token_hex(16)
-    active_sessions[token] = time.time()
+    # 創建會話
+    session_token = secrets.token_urlsafe(32)
+    active_sessions[session_token] = time.time()
     
-    # 返回帶有 session cookie 的回應
-    response = JSONResponse(content={"message": "登入成功"})
-    response.set_cookie(
-        key="session_token", 
-        value=token, 
-        httponly=True,
-        max_age=86400,  # 24 小時
-        samesite="lax"
-    )
+    response = JSONResponse(content={"message": "Login successful"})
+    response.set_cookie(key="session_token", value=session_token)
     return response
+
+
 
 # 登出 API
 @app.post("/logout")
@@ -264,30 +274,15 @@ def get_students(
     
     return result
 
-# 獲取單個學生
+# 檢查學生是否存在
 @app.get("/students/{student_id}")
-def get_student(
-    student_id: str, 
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
-    
-    if student is None:
-        raise HTTPException(status_code=404, detail="學生資料不存在")
-    
-    created_at = student.created_at
-    if created_at and not created_at.tzinfo:
-        created_at = created_at.replace(tzinfo=timezone.utc)
-    
-    return {
-        "id": student.id,
-        "student_id": student.student_id,
-        "grade": student.grade,
-        "name": student.name,
-        "email": student.email,
-        "created_at": created_at.isoformat()
-    }
+def check_student(student_id: str, db: Session = Depends(get_db)):
+    from app.models import Student  # 導入 Student 模型
+    student = db.query(Student).filter(Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return student
+
 
 # 創建學生資料
 @app.post("/students/")

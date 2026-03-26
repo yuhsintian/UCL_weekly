@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/api';
+import { login, checkStudentExists } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Login = () => {
+  const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,17 @@ const Login = () => {
     setError('');
     
     try {
-      await login(password);
+      // 先檢查學號是否存在
+      const studentExists = await checkStudentExists(studentId);
+      
+      if (!studentExists) {
+        setError('學號不存在，請確認您的學號或聯繫管理員');
+        setLoading(false);
+        return;
+      }
+      
+      // 學號存在，繼續進行密碼驗證
+      await login(password, studentId);
       navigate('/dashboard');
     } catch (err) {
       setError('認證失敗');
@@ -55,6 +66,17 @@ const Login = () => {
             <div className="card-body">
               {error && <div className="alert alert-danger">{error}</div>}
               <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <label htmlFor="studentId" className="form-label">學號</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    id="studentId"
+                    value={studentId}
+                    onChange={(e) => setStudentId(e.target.value)}
+                    required
+                  />
+                </div>
                 <div className="mb-3">
                   <label htmlFor="password" className="form-label">認證碼</label>
                   <input

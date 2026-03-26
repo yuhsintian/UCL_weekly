@@ -29,21 +29,48 @@ export const formatToTaiwanTime = (utcTimeString) => {
   return `${year}/${month}/${day} ${ampm}${hours12Str}:${minutes}:${seconds}`;
 };
 
-
+// 檢查學生是否存在
+export const checkStudentExists = async (studentId) => {
+  try {
+    const response = await fetch(`${API_URL}/students/${studentId}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Origin': window.location.origin
+      }
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('檢查學生存在時出錯:', error);
+    return false;
+  }
+};
 
 // 登入
-export const login = async (password) => {
+export const login = async (password, studentId) => {
   const formData = new FormData();
   formData.append('password', password);
+  formData.append('student_id', studentId);
   
-  const response = await fetch(`${API_URL}/login`, {
+  const response = await fetch(`${API_URL}/login/`, {
     method: 'POST',
     body: formData,
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    const errorText = await response.text();
+    try {
+      const errorData = JSON.parse(errorText);
+      throw new Error(errorData.detail || `登入失敗: ${response.status}`);
+    } catch (e) {
+      throw new Error(`登入失敗: ${response.status}`);
+    }
   }
   
   return await response.json();
@@ -53,11 +80,14 @@ export const login = async (password) => {
 export const logout = async () => {
   const response = await fetch(`${API_URL}/logout`, {
     method: 'POST',
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    throw new Error(`登出失敗: ${response.status}`);
   }
   
   return await response.json();
@@ -66,11 +96,18 @@ export const logout = async () => {
 // 獲取週報列表
 export const getReports = async () => {
   const response = await fetch(`${API_URL}/reports/`, {
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    }
+    throw new Error(`獲取週報失敗: ${response.status}`);
   }
   
   const reports = await response.json();
@@ -86,11 +123,20 @@ export const getReports = async () => {
 // 獲取單個週報
 export const getReport = async (id) => {
   const response = await fetch(`${API_URL}/reports/${id}`, {
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    } else if (response.status === 404) {
+      throw new Error('週報不存在');
+    }
+    throw new Error(`獲取週報失敗: ${response.status}`);
   }
   
   const report = await response.json();
@@ -107,16 +153,19 @@ export const uploadReport = async (formData) => {
   const response = await fetch(`${API_URL}/reports/`, {
     method: 'POST',
     body: formData,
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
     const errorText = await response.text();
     try {
       const errorData = JSON.parse(errorText);
-      throw new Error(errorData.detail || `API 錯誤: ${response.status}`);
+      throw new Error(errorData.detail || `上傳週報失敗: ${response.status}`);
     } catch (e) {
-      throw new Error(`API 錯誤: ${response.status}`);
+      throw new Error(`上傳週報失敗: ${response.status}`);
     }
   }
   
@@ -133,11 +182,19 @@ export const uploadReport = async (formData) => {
 export const deleteReport = async (id) => {
   const response = await fetch(`${API_URL}/reports/${id}`, {
     method: 'DELETE',
-    credentials: 'include'  // 重要：包含 cookies
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    } else if (response.status === 404) {
+      throw new Error('週報不存在');
+    }
+    throw new Error(`刪除週報失敗: ${response.status}`);
   }
   
   return await response.json();
@@ -146,11 +203,18 @@ export const deleteReport = async (id) => {
 // 獲取所有學生
 export const getStudents = async () => {
   const response = await fetch(`${API_URL}/students/`, {
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    }
+    throw new Error(`獲取學生資料失敗: ${response.status}`);
   }
   
   return await response.json();
@@ -159,11 +223,20 @@ export const getStudents = async () => {
 // 獲取單個學生
 export const getStudent = async (studentId) => {
   const response = await fetch(`${API_URL}/students/${studentId}`, {
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    } else if (response.status === 404) {
+      throw new Error('學生資料不存在');
+    }
+    throw new Error(`獲取學生資料失敗: ${response.status}`);
   }
   
   return await response.json();
@@ -180,16 +253,19 @@ export const createStudent = async (studentData) => {
   const response = await fetch(`${API_URL}/students/`, {
     method: 'POST',
     body: formData,
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
     const errorText = await response.text();
     try {
       const errorData = JSON.parse(errorText);
-      throw new Error(errorData.detail || `API 錯誤: ${response.status}`);
+      throw new Error(errorData.detail || `創建學生資料失敗: ${response.status}`);
     } catch (e) {
-      throw new Error(`API 錯誤: ${response.status}`);
+      throw new Error(`創建學生資料失敗: ${response.status}`);
     }
   }
   
@@ -206,11 +282,19 @@ export const updateStudent = async (studentId, studentData) => {
   const response = await fetch(`${API_URL}/students/${studentId}`, {
     method: 'PUT',
     body: formData,
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    } else if (response.status === 404) {
+      throw new Error('學生資料不存在');
+    }
+    throw new Error(`更新學生資料失敗: ${response.status}`);
   }
   
   return await response.json();
@@ -220,11 +304,19 @@ export const updateStudent = async (studentId, studentData) => {
 export const deleteStudent = async (studentId) => {
   const response = await fetch(`${API_URL}/students/${studentId}`, {
     method: 'DELETE',
-    credentials: 'include'
+    credentials: 'include',
+    headers: {
+      'Origin': window.location.origin
+    }
   });
   
   if (!response.ok) {
-    throw new Error(`API 錯誤: ${response.status}`);
+    if (response.status === 401) {
+      throw new Error('請先登入');
+    } else if (response.status === 404) {
+      throw new Error('學生資料不存在');
+    }
+    throw new Error(`刪除學生資料失敗: ${response.status}`);
   }
   
   return await response.json();
