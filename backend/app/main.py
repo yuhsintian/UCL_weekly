@@ -12,7 +12,7 @@ import time
 from . import models
 from .database import engine, SessionLocal
 from app.database import engine
-from app.models import Base
+from app.models import Base, Report, Student
 
 # 建立資料表
 Base.metadata.create_all(bind=engine)
@@ -110,60 +110,19 @@ def logout(session_token: str = Cookie(None)):
 
 # 獲取所有週報
 @app.get("/reports/")
-def get_reports(
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    reports = db.query(models.Report).order_by(models.Report.created_at.desc()).offset(skip).limit(limit).all()
-    
-    # 將 SQLAlchemy 模型轉換為字典
-    result = []
-    for report in reports:
-        created_at = report.created_at
-        if created_at and not created_at.tzinfo:
-            # 如果時間沒有時區信息，添加 UTC 時區
-            created_at = created_at.replace(tzinfo=timezone.utc)
-            
-        result.append({
-            "id": report.id,
-            "title": report.title,
-            "author_name": report.author_name,
-            "week_number": report.week_number,
-            "content": report.content,
-            "file_path": report.file_path,
-            "created_at": created_at.isoformat()
-        })
-    
-    return result
+async def get_reports(db: Session = Depends(get_db), authenticated: bool = Depends(verify_session)):
+    # 添加 is_delete = 0 的條件
+    reports = db.query(Report).filter(Report.is_delete == 0).all()
+    return reports
 
 # 獲取單個週報
 @app.get("/reports/{report_id}")
-def get_report(
-    report_id: int, 
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
-    
-    if report is None:
+async def get_report(report_id: int, db: Session = Depends(get_db), authenticated: bool = Depends(verify_session)):
+    # 添加 is_delete = 0 的條件
+    report = db.query(Report).filter(Report.id == report_id, Report.is_delete == 0).first()
+    if not report:
         raise HTTPException(status_code=404, detail="週報不存在")
-    
-    # 確保時間包含時區信息
-    created_at = report.created_at
-    if created_at and not created_at.tzinfo:
-        created_at = created_at.replace(tzinfo=timezone.utc)
-        
-    return {
-        "id": report.id,
-        "title": report.title,
-        "author_name": report.author_name,
-        "week_number": report.week_number,
-        "content": report.content,
-        "file_path": report.file_path,
-        "created_at": created_at.isoformat()
-    }
+    return report
 
 # 上傳週報
 @app.post("/reports/")
@@ -202,7 +161,8 @@ async def create_report(
         week_number=week_number,
         content=content,
         file_path=filename,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
+        is_delete=0
     )
     
     db.add(db_report)
@@ -221,68 +181,39 @@ async def create_report(
         "week_number": db_report.week_number,
         "content": db_report.content,
         "file_path": db_report.file_path,
-        "created_at": created_at.isoformat()
+        "created_at": created_at.isoformat(),
+        "is_delete": db_report.is_delete
     }
 
 # 刪除週報
 @app.delete("/reports/{report_id}")
-def delete_report(
-    report_id: int, 
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    report = db.query(models.Report).filter(models.Report.id == report_id).first()
-    
-    if report is None:
+async def delete_report(report_id: int, db: Session = Depends(get_db), authenticated: bool = Depends(verify_session)):
+    # 修改為軟刪除
+    report = db.query(Report).filter(Report.id == report_id).first()
+    if not report:
         raise HTTPException(status_code=404, detail="週報不存在")
     
-    # 刪除檔案
-    if report.file_path:
-        file_path = os.path.join("app/uploads", report.file_path)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    
-    db.delete(report)
+    # 將 is_delete 設為 1，而不是實際刪除
+    report.is_delete = 1
     db.commit()
     
     return {"message": "週報已刪除"}
 
 # 獲取所有學生
 @app.get("/students/")
-def get_students(
-    skip: int = 0, 
-    limit: int = 100, 
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    students = db.query(models.Student).offset(skip).limit(limit).all()
-    
-    result = []
-    for student in students:
-        created_at = student.created_at
-        if created_at and not created_at.tzinfo:
-            created_at = created_at.replace(tzinfo=timezone.utc)
-            
-        result.append({
-            "id": student.id,
-            "student_id": student.student_id,
-            "grade": student.grade,
-            "name": student.name,
-            "email": student.email,
-            "created_at": created_at.isoformat()
-        })
-    
-    return result
+async def get_students(db: Session = Depends(get_db), authenticated: bool = Depends(verify_session)):
+    # 添加 is_delete = 0 的條件
+    students = db.query(Student).filter(Student.is_delete == 0).all()
+    return students
 
 # 檢查學生是否存在
 @app.get("/students/{student_id}")
-def check_student(student_id: str, db: Session = Depends(get_db)):
-    from app.models import Student  # 導入 Student 模型
-    student = db.query(Student).filter(Student.student_id == student_id).first()
+async def get_student(student_id: str, db: Session = Depends(get_db)):
+    # 添加 is_delete = 0 的條件
+    student = db.query(Student).filter(Student.student_id == student_id, Student.is_delete == 0).first()
     if not student:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=404, detail="學生不存在")
     return student
-
 
 # 創建學生資料
 @app.post("/students/")
@@ -305,7 +236,8 @@ def create_student(
         grade=grade,
         name=name,
         email=email,
-        created_at=datetime.now(timezone.utc)
+        created_at=datetime.now(timezone.utc),
+        is_delete=0
     )
     
     db.add(db_student)
@@ -322,7 +254,8 @@ def create_student(
         "grade": db_student.grade,
         "name": db_student.name,
         "email": db_student.email,
-        "created_at": created_at.isoformat()
+        "created_at": created_at.isoformat(),
+        "is_delete": db_student.is_delete
     }
 
 # 更新學生資料
@@ -361,16 +294,14 @@ def update_student(
 
 # 刪除學生資料
 @app.delete("/students/{student_id}")
-def delete_student(
-    student_id: str,
-    db: Session = Depends(get_db),
-    authenticated: bool = Depends(verify_session)
-):
-    db_student = db.query(models.Student).filter(models.Student.student_id == student_id).first()
-    if db_student is None:
-        raise HTTPException(status_code=404, detail="學生資料不存在")
+async def delete_student(student_id: str, db: Session = Depends(get_db), authenticated: bool = Depends(verify_session)):
+    # 修改為軟刪除
+    student = db.query(Student).filter(Student.student_id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="學生不存在")
     
-    db.delete(db_student)
+    # 將 is_delete 設為 1，而不是實際刪除
+    student.is_delete = 1
     db.commit()
     
-    return {"message": "學生資料已成功刪除"}
+    return {"message": "學生已刪除"}

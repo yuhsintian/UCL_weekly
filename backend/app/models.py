@@ -13,6 +13,7 @@ class Report(Base):
     content = Column(Text, nullable=True)  
     file_path = Column(String(255), nullable=True) 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    is_delete = Column(Integer, default=0)
 
 class Student(Base):
     __tablename__ = "students"
@@ -23,3 +24,4 @@ class Student(Base):
     name = Column(String(100))  # 姓名
     email = Column(String(100))  # 信箱
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    is_delete = Column(Integer, default=0)
