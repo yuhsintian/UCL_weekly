@@ -242,6 +242,24 @@ export const getStudent = async (studentId) => {
   return await response.json();
 };
 
+// 獲取單個學生資料
+export const getStudentById = async (studentId) => {
+  const response = await fetch(`${API_URL}/students/${studentId}`, {
+    credentials: 'include',
+    headers: {
+      'Accept': 'application/json',
+      'Origin': window.location.origin
+    }
+  });
+  
+  if (!response.ok) {
+    throw new Error(`獲取學生資料失敗: ${response.status}`);
+  }
+  
+  return await response.json();
+};
+
+
 // 創建學生資料
 export const createStudent = async (studentData) => {
   const formData = new FormData();

@@ -77,7 +77,7 @@ def read_root():
 # 登入端點
 @app.post("/login/")
 def login(password: str = Form(...), student_id: str = Form(...), db: Session = Depends(get_db)):
-    from app.models import Student  # 導入 Student 模型
+    from app.models import Student
     
     # 先檢查學生是否存在
     student = db.query(Student).filter(Student.student_id == student_id).first()
@@ -94,7 +94,10 @@ def login(password: str = Form(...), student_id: str = Form(...), db: Session = 
     
     response = JSONResponse(content={"message": "Login successful"})
     response.set_cookie(key="session_token", value=session_token)
+    # 添加學號到 cookie
+    response.set_cookie(key="student_id", value=student_id)
     return response
+
 
 
 

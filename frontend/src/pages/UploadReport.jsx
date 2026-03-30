@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { uploadReport } from '../services/api';
+import { uploadReport, getStudents, getStudentById } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const UploadReport = () => {
@@ -11,11 +11,13 @@ const UploadReport = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [currentStudentId, setCurrentStudentId] = useState(null);
   const navigate = useNavigate();
   
-  // 添加檢查登入狀態的效果
+  // 添加檢查登入狀態的效果，並獲取學生資料
   useEffect(() => {
-    const checkLogin = async () => {
+    const checkLoginAndGetData = async () => {
       try {
         // 嘗試獲取週報列表，如果失敗就表示未登入
         const response = await fetch('http://163.18.26.141:8000/reports/', {
@@ -24,13 +26,51 @@ const UploadReport = () => {
         
         if (!response.ok) {
           navigate('/login');
+          return;
+        }
+        
+        // 獲取所有學生列表
+        try {
+          const allStudents = await getStudents();
+          // 過濾掉已刪除的學生
+          const activeStudents = allStudents.filter(student => !student.is_delete);
+          setStudents(activeStudents);
+        } catch (err) {
+          console.error('獲取學生列表失敗:', err);
+        }
+        
+        // 獲取當前登入的學生ID
+        // 從 cookie 中獲取學號 (需要後端在登入時設置)
+        const cookies = document.cookie.split(';');
+        let studentId = null;
+        
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'student_id') {
+            studentId = value;
+            break;
+          }
+        }
+        
+        if (studentId) {
+          setCurrentStudentId(studentId);
+          
+          try {
+            // 獲取學生資料
+            const studentInfo = await getStudentById(studentId);
+            if (studentInfo && studentInfo.name) {
+              setAuthorName(studentInfo.name);
+            }
+          } catch (err) {
+            console.error('獲取學生資料失敗:', err);
+          }
         }
       } catch (err) {
         navigate('/login');
       }
     };
     
-    checkLogin();
+    checkLoginAndGetData();
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -97,14 +137,28 @@ const UploadReport = () => {
             
             <div className="mb-3">
               <label htmlFor="authorName" className="form-label">作者姓名</label>
-              <input
-                type="text"
-                className="form-control"
+              <select
+                className="form-select"
                 id="authorName"
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 required
-              />
+              >
+                <option value="">請選擇作者</option>
+                {students.map(student => (
+                  <option 
+                    key={student.student_id} 
+                    value={student.name}
+                    // 如果是當前登入的學生，預設選中
+                    selected={student.student_id === currentStudentId}
+                  >
+                    {student.name} ({student.student_id})
+                  </option>
+                ))}
+              </select>
+              {currentStudentId && 
+                <small className="form-text text-muted"></small>
+              }
             </div>
             
             <div className="mb-3">
