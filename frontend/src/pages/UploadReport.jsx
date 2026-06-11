@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { uploadReport, getStudents, getStudentById } from '../services/api';
+import { uploadReport, getStudents, getStudentById, formatToTaiwanTime } from '../services/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const UploadReport = () => {
